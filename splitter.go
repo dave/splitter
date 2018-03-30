@@ -4,12 +4,31 @@ import (
 	"github.com/gopherjs/gopherjs/js"
 )
 
+type Split struct {
+	*js.Object
+	name        string
+	initialised bool
+}
+
 func New(name string) *Split {
 	return &Split{name: name}
 }
 
 func (s *Split) Init(args ...interface{}) {
 	s.Object = js.Global.Call("Split", args...)
+	s.initialised = true
+}
+
+func (s *Split) Destroy(args ...interface{}) {
+	s.Object.Call("destroy")
+	s.initialised = false
+}
+
+func (s *Split) Initialised() bool {
+	if s == nil {
+		return false
+	}
+	return s.initialised
 }
 
 func (s *Split) SetSizes(sizes []float64) {
@@ -20,17 +39,22 @@ func (s *Split) SetSizes(sizes []float64) {
 	s.Object.Call("setSizes", out)
 }
 
-func (s *Split) SetSizesIfChanged(sizes []float64) {
+func (s *Split) Changed(sizes []float64) bool {
 	current := s.GetSizes()
 	if len(current) != len(sizes) {
-		s.SetSizes(sizes)
-		return
+		return true
 	}
 	for i, v := range sizes {
 		if current[i] != v {
-			s.SetSizes(sizes)
-			return
+			return true
 		}
+	}
+	return false
+}
+
+func (s *Split) SetSizesIfChanged(sizes []float64) {
+	if s.Changed(sizes) {
+		s.SetSizes(sizes)
 	}
 }
 
@@ -43,9 +67,4 @@ func (s *Split) GetSizes() []float64 {
 		}
 	}
 	return out
-}
-
-type Split struct {
-	*js.Object
-	name string
 }
